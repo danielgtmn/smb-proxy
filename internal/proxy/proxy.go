@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/danielgietmann/smb-proxy/internal/config"
 )
@@ -53,10 +52,15 @@ func Run(ctx context.Context, cfg *config.Config) error {
 func handleConnection(ctx context.Context, cfg *config.Config, clientConn net.Conn) error {
 	defer clientConn.Close()
 
-	dialer := net.Dialer{Timeout: 15 * time.Second}
-	remoteConn, err := dialer.DialContext(ctx, "tcp", cfg.RemoteAddress())
+	dialer := net.Dialer{Timeout: cfg.DialTimeout}
+	address, network, err := cfg.RemoteDialTarget()
 	if err != nil {
-		return fmt.Errorf("connect to remote %s: %w", cfg.RemoteAddress(), err)
+		return fmt.Errorf("resolve remote target: %w", err)
+	}
+
+	remoteConn, err := dialer.DialContext(ctx, network, address)
+	if err != nil {
+		return fmt.Errorf("connect to remote %s: %w", address, err)
 	}
 	defer remoteConn.Close()
 

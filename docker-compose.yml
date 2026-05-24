@@ -4,16 +4,14 @@ services:
     container_name: smb-proxy
     restart: unless-stopped
     privileged: true
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
     ports:
       - "1445:445"
+    env_file:
+      - .env
     environment:
       SMB_PROXY_MODE: gateway
-      SMB_HOST: 192.168.1.100
-      SMB_SHARE: data
-      SMB_USER: smbuser
-      SMB_PASSWORD: changeme
-      SMB_DOMAIN: ""
-      LOCAL_SHARE: proxy
-      LOCAL_USER: proxy
-      LOCAL_PASSWORD: localpass
       LOCAL_ALLOW_GUEST: "false"

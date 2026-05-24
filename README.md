@@ -38,8 +38,14 @@ docker run -d \
 | --- | --- | --- | --- |
 | `SMB_PROXY_MODE` | no | `gateway` | `gateway` or `tcp` |
 | `SMB_HOST` | yes | — | Hostname or IP of the remote SMB server |
+| `SMB_HOST_IP` | no | — | Force a specific IPv4 address (useful when Docker prefers broken IPv6) |
 | `SMB_PORT` | no | `445` | Remote port |
+| `SMB_FORCE_IPV4` | no | `true` | Resolve and connect via IPv4 only |
+| `SMB_DIAL_TIMEOUT` | no | `30s` | Timeout for remote SMB connections |
+| `SMB_MOUNT_OPTIONS` | no | see below | Extra `mount.cifs` options (without `credentials=`) |
 | `LOCAL_PORT` | no | `445` | Local SMB port inside the container |
+
+Default `SMB_MOUNT_OPTIONS`: `iocharset=utf8,rw,seal,vers=3.0,uid=0,gid=0,file_mode=0664,dir_mode=0775,noserverino`
 
 ### Gateway mode
 
@@ -56,6 +62,62 @@ docker run -d \
 | `MOUNT_PATH` | no | `/mnt/remote` | Mount path inside the container |
 
 \* Not required when `LOCAL_ALLOW_GUEST=true`.
+
+## Hetzner Storage Box
+
+Official docs: [Zugriff mit SAMBA/CIFS](https://docs.hetzner.com/de/storage/storage-box/access/access-samba-cifs/)
+
+1. Enable **SMB support** in Hetzner Console (Settings → activate SMB)
+2. Wait a few minutes after activation before connecting
+3. Use these values:
+
+| Setting | Main account | Subaccount |
+| --- | --- | --- |
+| `SMB_HOST` | `u599718.your-storagebox.de` | `u599718-sub1.your-storagebox.de` |
+| `SMB_SHARE` | `backup` | `u599718-sub1` (same as username) |
+| `SMB_USER` | `u599718` | `u599718-sub1` |
+| `SMB_PASSWORD` | Storage Box password | Subaccount password |
+
+Remote UNC: `//u599718.your-storagebox.de/backup` — in `.env` only set `SMB_SHARE=backup`, not the full path.
+
+Hetzner recommends the `seal` mount option for encrypted SMB connections; smb-proxy sets this by default.
+
+**Notes from Hetzner:**
+
+- SMB uses port **445** (SSH/SFTP uses port **23** — different protocol)
+- FritzBox users may need to disable the NetBIOS filter
+- For files **over 4 GB**, add `cache=none` to `SMB_MOUNT_OPTIONS`
+
+Example `.env`:
+
+```env
+SMB_HOST=u599718.your-storagebox.de
+SMB_SHARE=backup
+SMB_USER=u599718
+SMB_PASSWORD=your-password
+SMB_FORCE_IPV4=true
+LOCAL_SHARE=test
+LOCAL_USER=proxy
+LOCAL_PASSWORD=localpass
+```
+
+## Local test with docker compose
+
+```bash
+cp .env.example .env
+# edit .env with your credentials
+
+docker compose up --build
+docker compose logs -f
+```
+
+Connect locally:
+
+```bash
+smbclient //127.0.0.1/test -p 1445 -U proxy
+```
+
+On macOS, map the share in Finder with `smb://127.0.0.1:1445/test`.
 
 ## Docker
 

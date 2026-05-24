@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -26,8 +27,30 @@ func TestLoadGatewayDefaults(t *testing.T) {
 	if cfg.LocalShare != "proxy" {
 		t.Fatalf("LocalShare = %q, want proxy", cfg.LocalShare)
 	}
+	if !cfg.ForceIPv4 {
+		t.Fatalf("ForceIPv4 = false, want true by default")
+	}
 	if cfg.RemoteUNC() != "//nas.example.com/data" {
 		t.Fatalf("RemoteUNC() = %q", cfg.RemoteUNC())
+	}
+}
+
+func TestMountOptionStringUsesHostIP(t *testing.T) {
+	cfg := &Config{
+		RemoteHost:   "u599718.your-storagebox.de",
+		RemoteHostIP: "91.98.255.149",
+		MountOptions: defaultMountOptions,
+	}
+
+	opts, err := cfg.MountOptionString("/run/smb-proxy/credentials")
+	if err != nil {
+		t.Fatalf("MountOptionString() error = %v", err)
+	}
+	if !strings.Contains(opts, "ip=91.98.255.149") {
+		t.Fatalf("MountOptionString() = %q, want ip=91.98.255.149", opts)
+	}
+	if !strings.Contains(opts, "seal") {
+		t.Fatalf("MountOptionString() = %q, want seal option", opts)
 	}
 }
 

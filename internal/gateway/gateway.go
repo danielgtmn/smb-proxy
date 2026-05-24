@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -50,18 +51,27 @@ func mountRemote(cfg *config.Config) error {
 		return fmt.Errorf("write credentials file: %w", err)
 	}
 
+	mountOptions, err := cfg.MountOptionString(credentialsPath)
+	if err != nil {
+		return fmt.Errorf("build mount options: %w", err)
+	}
+
 	options := []string{
 		"-t", "cifs",
 		cfg.RemoteUNC(),
 		cfg.MountPath,
-		"-o", fmt.Sprintf("credentials=%s,vers=3.0,uid=0,gid=0,file_mode=0664,dir_mode=0775,noserverino", credentialsPath),
+		"-o", mountOptions,
 	}
 
 	log.Printf("mounting remote share %s", cfg.RemoteUNC())
 	cmd := exec.Command("mount", options...)
+	var stderr bytes.Buffer
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("mount remote share: %w: %s", err, msg)
+		}
 		return fmt.Errorf("mount remote share: %w", err)
 	}
 

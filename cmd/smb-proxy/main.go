@@ -29,6 +29,9 @@ func main() {
 
 	if cfg.Mode == config.ModeGateway {
 		log.Printf("starting gateway mode for %s", cfg.RemoteUNC())
+		if address, _, err := cfg.RemoteDialTarget(); err == nil {
+			log.Printf("remote SMB dial target: %s", address)
+		}
 		if err := backend.Verify(ctx, cfg); err != nil {
 			log.Fatalf("remote SMB verification failed: %v", err)
 		}

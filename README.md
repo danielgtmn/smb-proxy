@@ -1,6 +1,6 @@
 # smb-proxy
 
-Go-basierter SMB-Proxy als Docker-Image. Verbindet sich mit einem entfernten SMB-Server (Credentials per Environment-Variable) und stellt den Share lokal als SMB bereit.
+Go-based SMB proxy as a Docker image. Connects to a remote SMB server (credentials via environment variables) and exposes the share locally over SMB.
 
 Source: [github.com/danielgtmn/smb-proxy](https://github.com/danielgtmn/smb-proxy)
 
@@ -23,39 +23,39 @@ docker run -d \
   ghcr.io/danielgtmn/smb-proxy:latest
 ```
 
-## Modi
+## Modes
 
-| Modus | Beschreibung |
+| Mode | Description |
 | --- | --- |
-| `gateway` (Standard) | Authentifiziert sich mit den Remote-Credentials, mountet den Share und exportiert ihn lokal über Samba. Clients verbinden sich mit `\\localhost\<LOCAL_SHARE>`. |
-| `tcp` | Reiner TCP-Forwarder von lokalem Port zum Remote-SMB-Server. Die Authentifizierung erfolgt clientseitig gegen den Zielserver. |
+| `gateway` (default) | Authenticates with remote credentials, mounts the share, and exports it locally via Samba. Clients connect with `\\localhost\<LOCAL_SHARE>`. |
+| `tcp` | Pure TCP forwarder from local port to remote SMB server. Authentication happens on the client side against the target server. |
 
-## Environment-Variablen
+## Environment variables
 
-### Allgemein
+### General
 
-| Variable | Pflicht | Standard | Beschreibung |
+| Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `SMB_PROXY_MODE` | nein | `gateway` | `gateway` oder `tcp` |
-| `SMB_HOST` | ja | — | Hostname oder IP des Remote-SMB-Servers |
-| `SMB_PORT` | nein | `445` | Remote-Port |
-| `LOCAL_PORT` | nein | `445` | Lokaler SMB-Port im Container |
+| `SMB_PROXY_MODE` | no | `gateway` | `gateway` or `tcp` |
+| `SMB_HOST` | yes | — | Hostname or IP of the remote SMB server |
+| `SMB_PORT` | no | `445` | Remote port |
+| `LOCAL_PORT` | no | `445` | Local SMB port inside the container |
 
-### Gateway-Modus
+### Gateway mode
 
-| Variable | Pflicht | Standard | Beschreibung |
+| Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `SMB_SHARE` | ja | — | Remote-Share-Name |
-| `SMB_USER` | ja | — | Benutzer für den Remote-Server |
-| `SMB_PASSWORD` | ja | — | Passwort für den Remote-Server |
-| `SMB_DOMAIN` | nein | — | Windows-Domain |
-| `LOCAL_SHARE` | nein | `proxy` | Name des lokal exportierten Shares |
-| `LOCAL_USER` | nein | `proxy` | Lokaler Samba-Benutzer |
-| `LOCAL_PASSWORD` | ja* | — | Passwort für lokale Clients |
-| `LOCAL_ALLOW_GUEST` | nein | `false` | Gastzugriff ohne Passwort erlauben |
-| `MOUNT_PATH` | nein | `/mnt/remote` | Mount-Pfad im Container |
+| `SMB_SHARE` | yes | — | Remote share name |
+| `SMB_USER` | yes | — | Username for the remote server |
+| `SMB_PASSWORD` | yes | — | Password for the remote server |
+| `SMB_DOMAIN` | no | — | Windows domain |
+| `LOCAL_SHARE` | no | `proxy` | Name of the locally exported share |
+| `LOCAL_USER` | no | `proxy` | Local Samba user |
+| `LOCAL_PASSWORD` | yes* | — | Password for local clients |
+| `LOCAL_ALLOW_GUEST` | no | `false` | Allow guest access without a password |
+| `MOUNT_PATH` | no | `/mnt/remote` | Mount path inside the container |
 
-\* Nicht erforderlich, wenn `LOCAL_ALLOW_GUEST=true`.
+\* Not required when `LOCAL_ALLOW_GUEST=true`.
 
 ## Docker
 
@@ -65,7 +65,7 @@ docker run -d \
 docker build -t smb-proxy .
 ```
 
-### Gateway (empfohlen)
+### Gateway (recommended)
 
 ```bash
 docker run -d \
@@ -83,12 +83,12 @@ docker run -d \
   ghcr.io/danielgtmn/smb-proxy:latest
 ```
 
-Verbinden:
+Connect:
 
-- Windows/macOS: `\\localhost\proxy` (Port 1445 muss ggf. über `net use` / Port-Forwarding gemappt werden)
+- Windows/macOS: `\\localhost\proxy` (port 1445 may need to be mapped via `net use` / port forwarding)
 - Linux: `smbclient //localhost/proxy -p 1445 -U proxy`
 
-### TCP-Proxy
+### TCP proxy
 
 ```bash
 docker run -d \
@@ -99,7 +99,7 @@ docker run -d \
   ghcr.io/danielgtmn/smb-proxy:latest
 ```
 
-Im TCP-Modus authentifizieren sich Clients direkt gegen den Remote-Server. Die Remote-Credentials aus den Environment-Variablen werden nicht verwendet.
+In TCP mode, clients authenticate directly against the remote server. Remote credentials from environment variables are not used.
 
 ## Release
 
@@ -112,35 +112,35 @@ Images are published to GHCR when a GitHub Release is published:
 
 ```bash
 cp docker-compose.yml docker-compose.local.yml
-# Werte in docker-compose.local.yml anpassen
+# Adjust values in docker-compose.local.yml
 docker compose -f docker-compose.local.yml up -d
 ```
 
-## Lokale Entwicklung
+## Local development
 
 ```bash
 go run ./cmd/smb-proxy
 ```
 
-Gateway-Modus benötigt Linux mit `mount.cifs` und `smbd` (typischerweise root).
+Gateway mode requires Linux with `mount.cifs` and `smbd` (typically root).
 
-## Architektur
+## Architecture
 
 ```mermaid
 flowchart LR
-  Client["Lokaler Client"] --> Samba["Samba im Container"]
-  Samba --> Mount["CIFS Mount"]
-  Mount --> Remote["Remote SMB Server"]
-  Go["Go smb-proxy"] --> Verify["go-smb2 Verbindungstest"]
+  Client["Local client"] --> Samba["Samba in container"]
+  Samba --> Mount["CIFS mount"]
+  Mount --> Remote["Remote SMB server"]
+  Go["Go smb-proxy"] --> Verify["go-smb2 connection test"]
   Go --> Samba
 ```
 
-1. Go prüft die Remote-Verbindung mit `go-smb2`.
-2. Der Remote-Share wird per `mount.cifs` eingebunden.
-3. Samba exportiert den Mount als lokalen Share.
+1. Go verifies the remote connection with `go-smb2`.
+2. The remote share is mounted via `mount.cifs`.
+3. Samba exports the mount as a local share.
 
-## Hinweise
+## Notes
 
-- Der Container benötigt `--privileged` oder `CAP_SYS_ADMIN` für CIFS-Mounts.
-- Port `445` ist auf macOS oft belegt; nutze z. B. `-p 1445:445`.
-- Für Produktion: Secrets über Docker Secrets oder einen Vault bereitstellen, nicht im Klartext in Compose-Dateien.
+- The container requires `--privileged` or `CAP_SYS_ADMIN` for CIFS mounts.
+- Port `445` is often in use on macOS; use e.g. `-p 1445:445`.
+- For production: provide secrets via Docker Secrets or a vault, not in plain text in compose files.
